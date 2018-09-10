@@ -14,19 +14,21 @@ import java.util.List;
  * to store more information in this class.
  */
 public class Scene {
+	
+	List<Polygon> polygons;
+	Vector3D lightPos;
 
 	public Scene(List<Polygon> polygons, Vector3D lightPos) {
-          // TODO fill this in.
+          this.polygons = polygons;
+          this.lightPos = lightPos;
 	}
 
 	public Vector3D getLight() {
-          // TODO fill this in.
-          return null;
+          return lightPos;
 	}
 
 	public List<Polygon> getPolygons() {
-          // TODO fill this in.
-          return null;
+          return polygons;
 	}
 
 	/**

@@ -1,6 +1,7 @@
 package renderer;
 
 import java.awt.Color;
+import java.util.List;
 
 import renderer.Scene.Polygon;
 
@@ -19,8 +20,20 @@ public class Pipeline {
 	 * should be hidden), and false otherwise.
 	 */
 	public static boolean isHidden(Polygon poly) {
-		// TODO fill this in.
-		return false;
+		//STAGE 1
+		/*
+		 * viewing along z axis
+		 * visible if normal has negative Z coordinate value
+		 * 
+		 */
+
+		//get normal
+		Vector3D[] points = poly.getVertices();
+		Vector3D a = points[1].minus(points[0]);
+		Vector3D b = points[2].minus(points[1]);
+		Vector3D n = a.crossProduct(b);
+		//if z positive is hidden
+		return n.z > 0;
 	}
 
 	/**
@@ -38,8 +51,27 @@ public class Pipeline {
 	 *            on the direction.
 	 */
 	public static Color getShading(Polygon poly, Vector3D lightDirection, Color lightColor, Color ambientLight) {
-		// TODO fill this in.
-		return null;
+		//STAGE 1
+
+		//calculate normal
+		Vector3D[] points = poly.getVertices();
+		Vector3D a = points[1].minus(points[0]);
+		Vector3D b = points[2].minus(points[1]);
+		Vector3D n = a.crossProduct(b);
+		
+		//calculate cos(theta)
+		float angle = n.cosTheta(lightDirection);
+		if(angle < 0) angle = 0;
+
+		//calculate shading
+		int red = (int) (ambientLight.getRed()*(poly.getReflectance().getRed()/255.0) + lightColor.getRed()*(poly.getReflectance().getRed()/255.0)*angle);
+		int green = (int) (ambientLight.getGreen()*(poly.getReflectance().getGreen()/255.0) + (lightColor.getGreen()*poly.getReflectance().getGreen()/255.0)*angle);
+		int blue = (int) (ambientLight.getBlue()*(poly.getReflectance().getBlue()/255.0) + (lightColor.getBlue()*poly.getReflectance().getBlue()/255.0)*angle);
+		if(red > 255) red = 255;
+		if(green > 255) green = 255;
+		if(blue > 255) blue = 255;
+		
+		return new Color(red, green, blue);
 	}
 
 	/**
@@ -90,8 +122,51 @@ public class Pipeline {
 	 * slides.
 	 */
 	public static EdgeList computeEdgeList(Polygon poly) {
-		// TODO fill this in.
-		return null;
+		int startY = Integer.MAX_VALUE;
+		int endY = Integer.MIN_VALUE;
+		//Get startY & endY
+		for(Vector3D v: poly.getVertices()) {
+			if(startY > v.y) startY = (int) v.y;
+			if(endY < v.y) endY = (int) v.y;
+		}
+		EdgeList edge = new EdgeList(startY, endY);
+
+		/**
+		 * Scan each edge and update the 2-column EdgeList
+		 * 
+		 */
+		Vector3D b;
+		Vector3D a;
+		for(int i = 0; i < 3; i++){ //each edge
+			a = poly.getVertices()[i];
+			if(i == 2)
+				b = poly.getVertices()[0];
+			else
+				b = poly.getVertices()[i+1];
+			//Get slopes
+			float xSlope = (b.x-a.x)/(b.y-a.y);
+			float zSlope = (b.z-a.z)/(b.y-a.y);
+			//Get initial values
+			float x = a.x;
+			float z = a.z;
+			int y = Math.round(a.y);
+			if(a.y < b.y) {	//if going down
+				while(y <= Math.round(b.y)) {
+					edge.addLeftRow(y, x, z);
+					x += xSlope;
+					z += zSlope;
+					y++;
+				}
+			}else { //if going up
+				while(y >= Math.round(b.y)) {
+					edge.addRightRow(y, x, z);
+					x -= xSlope;
+					z -= zSlope;
+					y--;
+				}
+			}
+		}
+		return edge;
 	}
 
 	/**
@@ -113,7 +188,19 @@ public class Pipeline {
 	 *            The colour of the polygon to add into the zbuffer.
 	 */
 	public static void computeZBuffer(Color[][] zbuffer, float[][] zdepth, EdgeList polyEdgeList, Color polyColor) {
-		// TODO fill this in.
+		for(int y = polyEdgeList.getStartY(); y < polyEdgeList.getEndY(); y++) {
+			float slope = (polyEdgeList.getRightZ(y) - polyEdgeList.getLeftZ(y)) /(polyEdgeList.getRightX(y) - polyEdgeList.getLeftX(y));
+			int x = Math.round(polyEdgeList.getLeftX(y));
+			float z = polyEdgeList.getLeftZ(y) + slope * (x - polyEdgeList.getLeftX(y));
+			while(x < Math.round(polyEdgeList.getRightX(y))) {
+				if(z < zdepth[x][y]) {
+					zbuffer[x][y] = polyColor;
+					zdepth[x][y] = z;
+				}
+				z = z + slope;
+				x++;
+			}
+		}
 	}
 }
 

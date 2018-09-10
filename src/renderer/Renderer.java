@@ -3,17 +3,61 @@ package renderer;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import renderer.Scene.Polygon;
 
 public class Renderer extends GUI {
+	Scene scene = new Scene(new ArrayList<Polygon>(), new Vector3D(0,0,0));
+	
 	@Override
 	protected void onLoad(File file) {
-		// TODO fill this in.
-
 		/*
 		 * This method should parse the given file into a Scene object, which
 		 * you store and use to render an image.
 		 */
+		
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(file));
+			
+			//Get light source
+			String line = reader.readLine();
+			String[] tokens = line.split(" ");
+			float x = Float.parseFloat(tokens[0]);
+			float y = Float.parseFloat(tokens[1]);
+			float z = Float.parseFloat(tokens[2]);
+			Vector3D light = new Vector3D(x,y,z);
+			
+			//Load polygons
+			List<Polygon> polygons = new ArrayList<Polygon>();
+			while((line = reader.readLine()) != null) {
+				tokens = line.split(" ");
+				//polygon points
+				float[] points = new float[9];
+				for(int i= 0; i < 9; i++) {
+					points[i] = Float.parseFloat(tokens[i]);
+				}
+				//polygon color
+				int[] color = new int[3];
+				int count = 0;
+				for(int i = 9; i < 12; i++) {
+					color[count] = Integer.parseInt(tokens[i]);
+				}
+				polygons.add(new Polygon(points, color));
+			}
+			scene = new Scene(polygons, light); //Create scene
+			reader.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -27,15 +71,28 @@ public class Renderer extends GUI {
 
 	@Override
 	protected BufferedImage render() {
-		// TODO fill this in.
-
 		/*
 		 * This method should put together the pieces of your renderer, as
 		 * described in the lecture. This will involve calling each of the
 		 * static method stubs in the Pipeline class, which you also need to
 		 * fill in.
 		 */
-		return null;
+		Color[][] zbuffer = new Color[CANVAS_WIDTH][CANVAS_HEIGHT];
+		float[][] zdepth = new float[CANVAS_WIDTH][CANVAS_HEIGHT];
+		for(int i = 0; i < zdepth.length; i++) {
+			for(int j = 0; j < zdepth.length; j++) {
+				zdepth[i][j] = Float.MAX_VALUE;
+				zbuffer[i][j] = Color.WHITE;
+			}
+		}
+		for(Polygon poly: scene.getPolygons()) {
+			if(!Pipeline.isHidden(poly)) {
+				EdgeList EL = Pipeline.computeEdgeList(poly);
+				Color polyColor = Pipeline.getShading(poly, scene.getLight(), new Color(100,100,100), new Color(getAmbientLight()[0], getAmbientLight()[1], getAmbientLight()[2]));
+				Pipeline.computeZBuffer(zbuffer, zdepth, EL, polyColor);
+			}
+		}
+		return convertBitmapToImage(zbuffer);
 	}
 
 	/**
