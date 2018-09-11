@@ -1,14 +1,13 @@
 package renderer;
 
 import java.awt.Color;
-import java.util.List;
 
 import renderer.Scene.Polygon;
 
 /**
  * The Pipeline class has method stubs for all the major components of the
  * rendering pipeline, for you to fill in.
- * 
+ *
  * Some of these methods can get quite long, in which case you should strongly
  * consider moving them out into their own file. You'll need to update the
  * imports in the test suite if you do.
@@ -24,7 +23,7 @@ public class Pipeline {
 		/*
 		 * viewing along z axis
 		 * visible if normal has negative Z coordinate value
-		 * 
+		 *
 		 */
 
 		//get normal
@@ -40,7 +39,7 @@ public class Pipeline {
 	 * Computes the colour of a polygon on the screen, once the lights, their
 	 * angles relative to the polygon's face, and the reflectance of the polygon
 	 * have been accounted for.
-	 * 
+	 *
 	 * @param lightDirection
 	 *            The Vector3D pointing to the directional light read in from
 	 *            the file.
@@ -58,19 +57,19 @@ public class Pipeline {
 		Vector3D a = points[1].minus(points[0]);
 		Vector3D b = points[2].minus(points[1]);
 		Vector3D n = a.crossProduct(b);
-		
+
 		//calculate cos(theta)
 		float angle = n.cosTheta(lightDirection);
 		if(angle < 0) angle = 0;
 
 		//calculate shading
-		int red = (int) (ambientLight.getRed()*(poly.getReflectance().getRed()/255.0) + lightColor.getRed()*(poly.getReflectance().getRed()/255.0)*angle);
-		int green = (int) (ambientLight.getGreen()*(poly.getReflectance().getGreen()/255.0) + (lightColor.getGreen()*poly.getReflectance().getGreen()/255.0)*angle);
-		int blue = (int) (ambientLight.getBlue()*(poly.getReflectance().getBlue()/255.0) + (lightColor.getBlue()*poly.getReflectance().getBlue()/255.0)*angle);
+		int red = (int) (ambientLight.getRed()*(poly.getReflectance().getRed()/255.0f) + lightColor.getRed()*(poly.getReflectance().getRed()/255.0f)*angle);
+		int green = (int) (ambientLight.getGreen()*(poly.getReflectance().getGreen()/255.0f) + (lightColor.getGreen()*poly.getReflectance().getGreen()/255.0f)*angle);
+		int blue = (int) (ambientLight.getBlue()*(poly.getReflectance().getBlue()/255.0f) + (lightColor.getBlue()*poly.getReflectance().getBlue()/255.0f)*angle);
 		if(red > 255) red = 255;
 		if(green > 255) green = 255;
 		if(blue > 255) blue = 255;
-		
+
 		return new Color(red, green, blue);
 	}
 
@@ -78,7 +77,7 @@ public class Pipeline {
 	 * This method should rotate the polygons and light such that the viewer is
 	 * looking down the Z-axis. The idea is that it returns an entirely new
 	 * Scene object, filled with new Polygons, that have been rotated.
-	 * 
+	 *
 	 * @param scene
 	 *            The original Scene.
 	 * @param xRot
@@ -97,7 +96,7 @@ public class Pipeline {
 
 	/**
 	 * This should translate the scene by the appropriate amount.
-	 * 
+	 *
 	 * @param scene
 	 * @return
 	 */
@@ -108,7 +107,7 @@ public class Pipeline {
 
 	/**
 	 * This should scale the scene.
-	 * 
+	 *
 	 * @param scene
 	 * @return
 	 */
@@ -133,16 +132,18 @@ public class Pipeline {
 
 		/**
 		 * Scan each edge and update the 2-column EdgeList
-		 * 
+		 *
 		 */
 		Vector3D b;
 		Vector3D a;
-		for(int i = 0; i < 3; i++){ //each edge
+		for(int i = 0; i < poly.vertices.length; i++){ //each edge
+			int j = i+1;
+			if(j >= 3) j = 0;
+
 			a = poly.getVertices()[i];
-			if(i == 2)
-				b = poly.getVertices()[0];
-			else
-				b = poly.getVertices()[i+1];
+			b = poly.getVertices()[j];
+
+
 			//Get slopes
 			float xSlope = (b.x-a.x)/(b.y-a.y);
 			float zSlope = (b.z-a.z)/(b.y-a.y);
@@ -172,10 +173,10 @@ public class Pipeline {
 	/**
 	 * Fills a zbuffer with the contents of a single edge list according to the
 	 * lecture slides.
-	 * 
+	 *
 	 * The idea here is to make zbuffer and zdepth arrays in your main loop, and
 	 * pass them into the method to be modified.
-	 * 
+	 *
 	 * @param zbuffer
 	 *            A double array of colours representing the Color at each pixel
 	 *            so far.
@@ -188,16 +189,31 @@ public class Pipeline {
 	 *            The colour of the polygon to add into the zbuffer.
 	 */
 	public static void computeZBuffer(Color[][] zbuffer, float[][] zdepth, EdgeList polyEdgeList, Color polyColor) {
-		for(int y = polyEdgeList.getStartY(); y < polyEdgeList.getEndY(); y++) {
+		int startY = polyEdgeList.getStartY();
+		int endY = polyEdgeList.getEndY();
+
+		for(int y = startY; y < endY; y++) {
+
+			//~~~ edit This ~~~ do not render pixels that are out-of-boundary
+	        if (y + startY < 0 || y + startY >= zbuffer.length) continue;
+
 			float slope = (polyEdgeList.getRightZ(y) - polyEdgeList.getLeftZ(y)) /(polyEdgeList.getRightX(y) - polyEdgeList.getLeftX(y));
 			int x = Math.round(polyEdgeList.getLeftX(y));
 			float z = polyEdgeList.getLeftZ(y) + slope * (x - polyEdgeList.getLeftX(y));
+
 			while(x < Math.round(polyEdgeList.getRightX(y))) {
+				// do not render pixels that are out-of-boundary
+	            if (x < 0 || x >= zbuffer.length) {
+	                z += slope;
+	                x++;
+	                continue;
+	            }
+
 				if(z < zdepth[x][y]) {
 					zbuffer[x][y] = polyColor;
 					zdepth[x][y] = z;
 				}
-				z = z + slope;
+				z += slope;
 				x++;
 			}
 		}

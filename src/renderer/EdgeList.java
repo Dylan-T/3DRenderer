@@ -9,27 +9,31 @@ package renderer;
  * an addRow(y, xLeft, xRight, zLeft, zRight) method.
  */
 public class EdgeList {
-	float[][] edgelist; //x z x z
+	float[][] edgelist;
 	int startY;
 	int endY;
-	
-	
+
+
 	public EdgeList(int startY, int endY) {
 		this.startY = startY;
 		this.endY = endY;
 		edgelist = new float[4][endY-startY + 1];
 	}
-	
+
 	public void addLeftRow(int y, float xLeft, float zLeft){
-		edgelist[0][y - startY] = xLeft;
-		edgelist[1][y - startY] = zLeft;
+		if(!(y< 0) && !(y > endY)) {
+			edgelist[0][y - startY] = xLeft;
+			edgelist[1][y - startY] = zLeft;
+		}
 	}
-	
+
 	public void addRightRow(int y, float xRight, float zRight){
-		edgelist[2][y - startY] = xRight;
-		edgelist[3][y - startY] = zRight;
+		if(!(y< 0) && !(y > endY)) {
+			edgelist[2][y - startY] = xRight;
+			edgelist[3][y - startY] = zRight;
+		}
 	}
-	
+
 	public int getStartY() {
 		return startY;
 	}

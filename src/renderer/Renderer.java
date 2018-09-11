@@ -14,18 +14,18 @@ import java.util.List;
 import renderer.Scene.Polygon;
 
 public class Renderer extends GUI {
-	Scene scene = new Scene(new ArrayList<Polygon>(), new Vector3D(0,0,0));
-	
+	Scene scene;
+
 	@Override
 	protected void onLoad(File file) {
 		/*
 		 * This method should parse the given file into a Scene object, which
 		 * you store and use to render an image.
 		 */
-		
+
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(file));
-			
+
 			//Get light source
 			String line = reader.readLine();
 			String[] tokens = line.split(" ");
@@ -33,7 +33,7 @@ public class Renderer extends GUI {
 			float y = Float.parseFloat(tokens[1]);
 			float z = Float.parseFloat(tokens[2]);
 			Vector3D light = new Vector3D(x,y,z);
-			
+
 			//Load polygons
 			List<Polygon> polygons = new ArrayList<Polygon>();
 			while((line = reader.readLine()) != null) {
@@ -48,6 +48,7 @@ public class Renderer extends GUI {
 				int count = 0;
 				for(int i = 9; i < 12; i++) {
 					color[count] = Integer.parseInt(tokens[i]);
+					count++;
 				}
 				polygons.add(new Polygon(points, color));
 			}
@@ -79,16 +80,19 @@ public class Renderer extends GUI {
 		 */
 		Color[][] zbuffer = new Color[CANVAS_WIDTH][CANVAS_HEIGHT];
 		float[][] zdepth = new float[CANVAS_WIDTH][CANVAS_HEIGHT];
-		for(int i = 0; i < zdepth.length; i++) {
-			for(int j = 0; j < zdepth.length; j++) {
-				zdepth[i][j] = Float.MAX_VALUE;
-				zbuffer[i][j] = Color.WHITE;
+		for(int i = 0; i < zbuffer.length; i++) {
+			for(int j = 0; j < zbuffer[i].length; j++) {
+				zdepth[i][j] = Float.POSITIVE_INFINITY;
+				zbuffer[i][j] = Color.GRAY;
 			}
 		}
+
+		if(scene == null) return convertBitmapToImage(zbuffer); //If there's no scene render blank image
+
 		for(Polygon poly: scene.getPolygons()) {
 			if(!Pipeline.isHidden(poly)) {
-				EdgeList EL = Pipeline.computeEdgeList(poly);
 				Color polyColor = Pipeline.getShading(poly, scene.getLight(), new Color(100,100,100), new Color(getAmbientLight()[0], getAmbientLight()[1], getAmbientLight()[2]));
+				EdgeList EL = Pipeline.computeEdgeList(poly);
 				Pipeline.computeZBuffer(zbuffer, zdepth, EL, polyColor);
 			}
 		}
