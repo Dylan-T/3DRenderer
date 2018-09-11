@@ -63,11 +63,8 @@ public class Renderer extends GUI {
 
 	@Override
 	protected void onKeyPress(KeyEvent ev) {
-		// TODO fill this in.
-
-		/*
-		 * This method should be used to rotate the user's viewpoint.
-		 */
+		scene = Pipeline.rotateScene(scene, -10, 0);
+		redraw();
 	}
 
 	@Override

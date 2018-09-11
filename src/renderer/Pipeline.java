@@ -1,6 +1,7 @@
 package renderer;
 
 import java.awt.Color;
+import java.util.ArrayList;
 
 import renderer.Scene.Polygon;
 
@@ -90,8 +91,19 @@ public class Pipeline {
 	 *         rotated accordingly.
 	 */
 	public static Scene rotateScene(Scene scene, float xRot, float yRot) {
-		// TODO fill this in.
-		return null;
+
+		Transform rotMat = Transform.newXRotation(xRot).compose(Transform.newYRotation(yRot));
+
+		Vector3D light = rotMat.multiply(scene.getLight());
+		ArrayList<Polygon> polygons = new ArrayList<Polygon>();
+		for(Polygon p: scene.getPolygons()) {
+			Vector3D[] v = p.getVertices();
+			for(int i = 0; i < v.length; i++) {
+				v[i] = rotMat.multiply(v[i]);
+			}
+			polygons.add(new Polygon(v[0], v[1], v[2], p.getReflectance()));
+		}
+		return new Scene(polygons ,light);
 	}
 
 	/**
@@ -150,20 +162,20 @@ public class Pipeline {
 			//Get initial values
 			float x = a.x;
 			float z = a.z;
-			int y = Math.round(a.y);
+			float y = a.y;
 			if(a.y < b.y) {	//if going down
 				while(y <= Math.round(b.y)) {
-					edge.addLeftRow(y, x, z);
+					edge.addLeftRow(Math.round(y), x, z);
 					x += xSlope;
 					z += zSlope;
 					y++;
 				}
 			}else { //if going up
 				while(y >= Math.round(b.y)) {
-					edge.addRightRow(y, x, z);
+					edge.addRightRow(Math.round(y), x, z);
 					x -= xSlope;
 					z -= zSlope;
-					y--;
+					y = y - 1;
 				}
 			}
 		}
