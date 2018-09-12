@@ -66,20 +66,18 @@ public class Renderer extends GUI {
 	@Override
 	protected void onKeyPress(KeyEvent ev) {
 		if(scene == null) return;
-		if(ev.getKeyCode() == KeyEvent.VK_LEFT)
-
 		switch(ev.getKeyCode()) {
 		case KeyEvent.VK_LEFT:
-			scene = Pipeline.rotateScene(scene, 0, -1);
+			scene = Pipeline.rotateScene(scene, 0, -0.5f);
 			break;
 		case KeyEvent.VK_RIGHT:
-			scene = Pipeline.rotateScene(scene, 0, 1);
+			scene = Pipeline.rotateScene(scene, 0, 0.5f);
 			break;
 		case KeyEvent.VK_UP:
-			scene = Pipeline.rotateScene(scene, -1, 0);
+			scene = Pipeline.rotateScene(scene, -0.5f, 0);
 			break;
 		case KeyEvent.VK_DOWN:
-			scene = Pipeline.rotateScene(scene, 1, 0);
+			scene = Pipeline.rotateScene(scene, 0.5f, 0);
 			break;
 		}
 		redraw();

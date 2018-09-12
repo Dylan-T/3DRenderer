@@ -85,7 +85,6 @@ public class Pipeline {
 	public static Scene rotateScene(Scene scene, float xRot, float yRot) {
 		Transform rotMat = Transform.newXRotation(xRot).compose(Transform.newYRotation(yRot)); //Create rotation matrix
 
-		Vector3D light = rotMat.multiply(scene.getLight()); //rotate light source
 
 		//rotate all polygons
 		ArrayList<Polygon> polygons = new ArrayList<Polygon>();
@@ -96,7 +95,7 @@ public class Pipeline {
 			}
 			polygons.add(new Polygon(v[0], v[1], v[2], p.getReflectance()));
 		}
-		return translateScene(new Scene(polygons ,light));
+		return translateScene(scaleScene(new Scene(polygons ,scene.getLight())));
 	}
 
 	/**
@@ -121,7 +120,7 @@ public class Pipeline {
 
 
 		//Translate all poly's accordingly
-		Transform translation = Transform.newTranslation(-xMin, -yMin, 0f);
+		Transform translation = Transform.newTranslation(-xMin, -yMin, 0);
 		ArrayList<Polygon> polygons = new ArrayList<Polygon>();
 		for(Polygon p : scene.polygons) {
 			Vector3D[] v = p.getVertices();
@@ -134,7 +133,7 @@ public class Pipeline {
 		//Translate light
 		translation.multiply(scene.getLight());
 
-		return new Scene(polygons, translation.multiply(scene.getLight()));
+		return new Scene(polygons, scene.getLight());
 	}
 
 	/**
@@ -163,6 +162,7 @@ public class Pipeline {
 		int boxWidth = xMax - xMin;
 
 		int s =  boxHeight > boxWidth ? boxHeight : boxWidth;
+		//if(s == 0) s = 1;
 		s = 600 / s; // scale is the ratio of bounding box : canvas
 
 
@@ -259,7 +259,7 @@ public class Pipeline {
 		for(int y = startY; y < endY; y++) {
 
 			//~~~ edit This ~~~ do not render pixels that are out-of-boundary
-			if (y + startY < 0 || y + startY >= zbuffer.length) continue;
+			//if (y + startY < 0 || y + startY >= zbuffer.length) continue;
 
 			float slope = (polyEdgeList.getRightZ(y) - polyEdgeList.getLeftZ(y)) /(polyEdgeList.getRightX(y) - polyEdgeList.getLeftX(y));
 			int x = Math.round(polyEdgeList.getLeftX(y));
