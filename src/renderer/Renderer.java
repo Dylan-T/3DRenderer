@@ -53,6 +53,8 @@ public class Renderer extends GUI {
 				polygons.add(new Polygon(points, color));
 			}
 			scene = new Scene(polygons, light); //Create scene
+			scene = Pipeline.scaleScene(scene);
+			scene = Pipeline.translateScene(scene);
 			reader.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -63,7 +65,23 @@ public class Renderer extends GUI {
 
 	@Override
 	protected void onKeyPress(KeyEvent ev) {
-		scene = Pipeline.rotateScene(scene, -10, 0);
+		if(scene == null) return;
+		if(ev.getKeyCode() == KeyEvent.VK_LEFT)
+
+		switch(ev.getKeyCode()) {
+		case KeyEvent.VK_LEFT:
+			scene = Pipeline.rotateScene(scene, 0, -1);
+			break;
+		case KeyEvent.VK_RIGHT:
+			scene = Pipeline.rotateScene(scene, 0, 1);
+			break;
+		case KeyEvent.VK_UP:
+			scene = Pipeline.rotateScene(scene, -1, 0);
+			break;
+		case KeyEvent.VK_DOWN:
+			scene = Pipeline.rotateScene(scene, 1, 0);
+			break;
+		}
 		redraw();
 	}
 

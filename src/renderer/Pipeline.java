@@ -2,6 +2,7 @@ package renderer;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.List;
 
 import renderer.Scene.Polygon;
 
@@ -20,13 +21,6 @@ public class Pipeline {
 	 * should be hidden), and false otherwise.
 	 */
 	public static boolean isHidden(Polygon poly) {
-		//STAGE 1
-		/*
-		 * viewing along z axis
-		 * visible if normal has negative Z coordinate value
-		 *
-		 */
-
 		//get normal
 		Vector3D[] points = poly.getVertices();
 		Vector3D a = points[1].minus(points[0]);
@@ -51,8 +45,6 @@ public class Pipeline {
 	 *            on the direction.
 	 */
 	public static Color getShading(Polygon poly, Vector3D lightDirection, Color lightColor, Color ambientLight) {
-		//STAGE 1
-
 		//calculate normal
 		Vector3D[] points = poly.getVertices();
 		Vector3D a = points[1].minus(points[0]);
@@ -91,10 +83,11 @@ public class Pipeline {
 	 *         rotated accordingly.
 	 */
 	public static Scene rotateScene(Scene scene, float xRot, float yRot) {
+		Transform rotMat = Transform.newXRotation(xRot).compose(Transform.newYRotation(yRot)); //Create rotation matrix
 
-		Transform rotMat = Transform.newXRotation(xRot).compose(Transform.newYRotation(yRot));
+		Vector3D light = rotMat.multiply(scene.getLight()); //rotate light source
 
-		Vector3D light = rotMat.multiply(scene.getLight());
+		//rotate all polygons
 		ArrayList<Polygon> polygons = new ArrayList<Polygon>();
 		for(Polygon p: scene.getPolygons()) {
 			Vector3D[] v = p.getVertices();
@@ -103,7 +96,7 @@ public class Pipeline {
 			}
 			polygons.add(new Polygon(v[0], v[1], v[2], p.getReflectance()));
 		}
-		return new Scene(polygons ,light);
+		return translateScene(new Scene(polygons ,light));
 	}
 
 	/**
@@ -113,8 +106,35 @@ public class Pipeline {
 	 * @return
 	 */
 	public static Scene translateScene(Scene scene) {
-		// TODO fill this in.
-		return null;
+
+		//get min/max values
+		int xMin = Integer.MAX_VALUE;
+		int yMin = Integer.MAX_VALUE;
+		int zMax = Integer.MIN_VALUE;
+		for(Polygon p: scene.polygons) {
+			for(Vector3D v: p.vertices) {
+				if(v.x < xMin) xMin = Math.round(v.x);
+				if(v.y < yMin) yMin = Math.round(v.y);
+				if(v.z > zMax) zMax = Math.round(v.z);
+			}
+		}
+
+
+		//Translate all poly's accordingly
+		Transform translation = Transform.newTranslation(-xMin, -yMin, 0f);
+		ArrayList<Polygon> polygons = new ArrayList<Polygon>();
+		for(Polygon p : scene.polygons) {
+			Vector3D[] v = p.getVertices();
+			for(int i = 0; i < v.length; i++) {
+				v[i] = translation.multiply(v[i]);
+			}
+			polygons.add(new Polygon(v[0], v[1], v[2], p.getReflectance()));
+		}
+
+		//Translate light
+		translation.multiply(scene.getLight());
+
+		return new Scene(polygons, translation.multiply(scene.getLight()));
 	}
 
 	/**
@@ -124,8 +144,40 @@ public class Pipeline {
 	 * @return
 	 */
 	public static Scene scaleScene(Scene scene) {
-		// TODO fill this in.
-		return null;
+
+		//get bounding box
+		int xMin = Integer.MAX_VALUE;
+		int xMax = Integer.MIN_VALUE;
+		int yMin = Integer.MAX_VALUE;
+		int yMax = Integer.MIN_VALUE;
+		for(Polygon p: scene.polygons) {
+			for(Vector3D v: p.vertices) {
+				if(v.x < xMin) xMin = Math.round(v.x);
+				if(v.x > xMax) xMax = Math.round(v.x);
+				if(v.y < yMin) yMin = Math.round(v.y);
+				if(v.y > yMax) yMax = Math.round(v.y);
+			}
+		}
+
+		int boxHeight = yMax - yMin;
+		int boxWidth = xMax - xMin;
+
+		int s =  boxHeight > boxWidth ? boxHeight : boxWidth;
+		s = 600 / s; // scale is the ratio of bounding box : canvas
+
+
+		//scale all poly's accordingly
+		Transform scale = Transform.newScale(s, s, s);
+		ArrayList<Polygon> polygons = new ArrayList<Polygon>();
+		for(Polygon p : scene.polygons) {
+			Vector3D[] v = p.getVertices();
+			for(int i = 0; i < v.length; i++) {
+				v[i] = scale.multiply(v[i]);
+			}
+			polygons.add(new Polygon(v[0], v[1], v[2], p.getReflectance()));
+		}
+
+		return new Scene(polygons, scale.multiply(scene.lightPos));
 	}
 
 	/**
@@ -207,7 +259,7 @@ public class Pipeline {
 		for(int y = startY; y < endY; y++) {
 
 			//~~~ edit This ~~~ do not render pixels that are out-of-boundary
-	        if (y + startY < 0 || y + startY >= zbuffer.length) continue;
+			if (y + startY < 0 || y + startY >= zbuffer.length) continue;
 
 			float slope = (polyEdgeList.getRightZ(y) - polyEdgeList.getLeftZ(y)) /(polyEdgeList.getRightX(y) - polyEdgeList.getLeftX(y));
 			int x = Math.round(polyEdgeList.getLeftX(y));
@@ -215,11 +267,11 @@ public class Pipeline {
 
 			while(x < Math.round(polyEdgeList.getRightX(y))) {
 				// do not render pixels that are out-of-boundary
-	            if (x < 0 || x >= zbuffer.length) {
-	                z += slope;
-	                x++;
-	                continue;
-	            }
+				if (x < 0 || x >= zbuffer.length) {
+					z += slope;
+					x++;
+					continue;
+				}
 
 				if(z < zdepth[x][y]) {
 					zbuffer[x][y] = polyColor;
